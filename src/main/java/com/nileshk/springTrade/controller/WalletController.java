@@ -1,10 +1,9 @@
 package com.nileshk.springTrade.controller;
 
-import com.nileshk.springTrade.model.Order;
-import com.nileshk.springTrade.model.User;
-import com.nileshk.springTrade.model.Wallet;
-import com.nileshk.springTrade.model.WalletTransaction;
+import com.nileshk.springTrade.model.*;
+import com.nileshk.springTrade.response.PaymentResponse;
 import com.nileshk.springTrade.service.OrderService;
+import com.nileshk.springTrade.service.PaymentService;
 import com.nileshk.springTrade.service.UserService;
 import com.nileshk.springTrade.service.WalletService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +20,8 @@ public class WalletController {
     private UserService userService;
     @Autowired
     private OrderService orderService;
+    @Autowired
+    private PaymentService paymentService;
 
     @GetMapping("/api/wallet")
     public ResponseEntity<Wallet> getUserWallet(@RequestHeader("Authorization") String jwt) throws Exception {
@@ -45,6 +46,21 @@ public class WalletController {
         User user=userService.findUserProfileByJwt(jwt);
         Order order=orderService.getOrderById(orderId);
         Wallet wallet=walletService.payOrderPayment(order,user);
+        return new ResponseEntity<>(wallet,HttpStatus.ACCEPTED);
+
+    }
+    @PutMapping("api/wallet/deposit")
+    public ResponseEntity<Wallet> addBalanceToWallet(@RequestHeader("Authorization")String jwt,
+                                                  @RequestParam(name="order_id")Long orderId,
+                                                  @RequestParam(name = "payment_id")String paymentId)throws Exception{
+        User user=userService.findUserProfileByJwt(jwt);
+
+        Wallet wallet=walletService.getUserWallet(user);
+        PaymentOrder order=paymentService.getPaymentOrderById(orderId);
+        Boolean status=paymentService.proceedPaymentOrder(order,paymentId);
+        if(status){
+            wallet=walletService.addBalance(wallet,order.getAmount());
+        }
         return new ResponseEntity<>(wallet,HttpStatus.ACCEPTED);
 
     }
